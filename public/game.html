@@ -207,6 +207,16 @@
                 alert("This cell is already taken. Please choose another!");
                 return;
             }
+            console.log("Cell clicked:", row, col);
+console.log("Current turn:", turn, "My ID:", myClientID);
+console.log("Board state for clicked cell:", boardCells[row][col]);
+
+            console.log("Attempting to emit makeMove:", {
+    RoomID: currentRoomID,
+    Player: myClientID,
+    Row: row,
+    Col: col
+});
 
             socket.emit('makeMove', {
                 RoomID: currentRoomID,
@@ -253,6 +263,7 @@
             } else {
                 setStatus(`Turn: ${turn === myClientID ? "Your turn" : "Opponent's turn"}`);
             }
+            console.log("Received updateBoard event. Game state:", game);
         });
 
         function updateBoardDisplay(game) {
