@@ -3,92 +3,88 @@
 <head>
   <meta charset="UTF-8" />
   <title>Tic Tac Toe Lobby</title>
-  <script src="https://cdn.socket.io/socket.io-1.7.0.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2em;
+    }
+    button {
+      margin: 0.5em 0;
+      padding: 0.5em 1em;
+      cursor: pointer;
+    }
+    .room {
+      margin-bottom: 1em;
+      display: flex;
+      align-items: center;
+      gap: 1em;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6">
+<body>
 
-  <h1 class="text-4xl font-bold mb-6">🎮 Tic Tac Toe Lobby</h1>
+  <h1>🎮 Tic Tac Toe Lobby</h1>
 
-  <button id="createRoomBtn" 
-          class="mb-6 px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
-    ➕ Create Room
-  </button>
+  <button onclick="createRoom()">➕ Create Room</button>
 
-  <h2 class="text-2xl font-semibold mb-4">Available Rooms</h2>
-  <div id="rooms" class="w-full max-w-md bg-white rounded shadow p-4 space-y-3">
-    Loading...
-  </div>
+  <h2>Available Rooms</h2>
+  <div id="rooms">Loading...</div>
 
+  <script src="https://cdn.socket.io/socket.io-1.7.0.js"></script>
   <script>
-    const NGROK_API_URL = 'https://wren-super-cobra.ngrok-free.app'; // เปลี่ยนเป็น backend ของคุณ
-    const socket = io(NGROK_API_URL);
+    const NGROK_URL = 'https://wren-super-cobra.ngrok-free.app'; // เปลี่ยน URL backend ของคุณ
+    const socket = io(NGROK_URL);
 
-    const roomsDiv = document.getElementById('rooms');
-    const createRoomBtn = document.getElementById('createRoomBtn');
+    socket.on('connect', () => {
+      console.log('[LOG] Connected to Socket.IO server');
+    });
+
+    socket.on('room-created', (newRoom) => {
+      console.log('[LOG] Room created event received:', newRoom);
+      loadRooms();  // โหลดรายการห้องใหม่
+    });
 
     async function loadRooms() {
       try {
-        const res = await fetch(`${NGROK_API_URL}/api/rooms`);
+        const res = await fetch(`${NGROK_URL}/api/rooms`);
         const data = await res.json();
+        const roomsDiv = document.getElementById('rooms');
+        roomsDiv.innerHTML = '';
 
         if (data.rooms.length === 0) {
-          roomsDiv.innerHTML = '<p class="text-gray-500">No rooms available.</p>';
+          roomsDiv.textContent = 'No rooms available.';
           return;
         }
 
-        roomsDiv.innerHTML = '';
         data.rooms.forEach(room => {
-          const roomDiv = document.createElement('div');
-          roomDiv.className = 'flex justify-between items-center border rounded px-4 py-2';
+          const div = document.createElement('div');
+          div.className = 'room';
 
-          roomDiv.innerHTML = `
-            <div>
-              <span class="font-semibold">Room ID:</span> ${room.roomID}<br />
-              <span class="text-sm text-gray-600">Players: ${room.players.length}</span>
-            </div>
-            <button class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition">
-              Join
-            </button>
-          `;
+          const roomText = document.createElement('span');
+          roomText.textContent = `Room ID: ${room.roomID} | Players: ${room.players.length}`;
 
-          roomDiv.querySelector('button').onclick = () => {
+          const joinBtn = document.createElement('button');
+          joinBtn.textContent = 'Join';
+          joinBtn.onclick = () => {
             window.location.href = `game.html?roomId=${room.roomID}`;
           };
 
-          roomsDiv.appendChild(roomDiv);
+          div.appendChild(roomText);
+          div.appendChild(joinBtn);
+          roomsDiv.appendChild(div);
         });
       } catch (err) {
-        roomsDiv.innerHTML = '<p class="text-red-600">Failed to load rooms.</p>';
+        const roomsDiv = document.getElementById('rooms');
+        roomsDiv.textContent = '❌ Failed to load rooms.';
         console.error(err);
       }
     }
 
-    createRoomBtn.onclick = async () => {
-      createRoomBtn.disabled = true;
-      createRoomBtn.textContent = "Creating...";
-      try {
-        const res = await fetch(`${NGROK_API_URL}/api/rooms`, { method: 'POST' });
-        const data = await res.json();
-        // Redirect ไปหน้าเกมทันที
-        window.location.href = `game.html?roomId=${data.room.roomID}`;
-      } catch (err) {
-        alert("❌ Failed to create room.");
-        console.error(err);
-      } finally {
-        createRoomBtn.disabled = false;
-        createRoomBtn.textContent = "➕ Create Room";
-      }
-    };
+    function createRoom() {
+      socket.emit('createRoom');
+    }
 
-    // โหลดห้องตอนเริ่มเพจ
     window.addEventListener('DOMContentLoaded', loadRooms);
-
-    // ฟัง event "room-created" เพื่อรีเฟรชห้องทันทีเมื่อมีการสร้างห้องใหม่
-    socket.on('room-created', (newRoom) => {
-      console.log("[LOG] New room created:", newRoom);
-      loadRooms();
-    });
   </script>
 
 </body>

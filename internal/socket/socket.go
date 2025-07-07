@@ -80,6 +80,11 @@ func InitSocketServer(gameHandler *hanlder.GameHandler) {
 		server.BroadcastToRoom("/", game.RoomID, "updateBoard", game)
 	})
 
+	server.OnEvent("/", "createRoom", func(conn socketio.Conn) {
+		createdRoom := gameHandler.CreateGameRoom(server)
+		server.BroadcastToRoom("/", createdRoom.RoomID, "room-created", createdRoom)
+	})
+
 }
 
 func GetSocketServer() *socketio.Server {
