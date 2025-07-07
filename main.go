@@ -16,8 +16,12 @@ import (
 func main() {
 	r := gin.Default()
 
-	// เปิด CORS
-	r.Use(cors.Default())
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"https://test-xo-online.vercel.app", "https://wren-super-cobra.ngrok-free.app"},
+		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
+		AllowCredentials: true,
+	}))
 
 	gameService := service.GameService{}
 	gameHandler := hanlder.NewGameHandler(gameService)

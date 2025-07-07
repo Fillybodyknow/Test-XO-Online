@@ -2,227 +2,483 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Tic Tac Toe Lobby</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎮 Tic Tac Toe Lobby</title>
   <script src="https://cdn.socket.io/socket.io-1.7.0.js"></script>
   <style>
-    body { font-family: sans-serif; margin: 2em; }
-    button { margin: 0.25em 0; }
-    #rooms button { margin-left: 1em; }
+    /* General Body Styles */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 2em;
+      background-color: #f4f7f6;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    /* Headings */
+    h1, h2 {
+      color: #2c3e50;
+      margin-bottom: 0.8em;
+      text-align: center;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      margin-top: 0.5em;
+      border-bottom: 2px solid #a8dadc;
+      padding-bottom: 0.5em;
+    }
+
+    h2 {
+      font-size: 1.8em;
+      margin-top: 1.5em;
+    }
+
+    /* Buttons */
+    button {
+      background-color: #4CAF50; /* Green */
+      color: white;
+      padding: 0.75em 1.5em;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      margin: 0.5em 0.5em; /* Added margin for spacing between buttons */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    button:hover {
+      background-color: #45a049;
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    #createRoomBtn, #leaveRoomBtn {
+        margin-bottom: 1.5em;
+    }
+    
+    /* Room Controls Container */
+    .room-controls {
+        display: flex;
+        gap: 1em; /* Space between buttons */
+        margin-bottom: 1.5em;
+    }
+
+    /* Available Rooms Section */
+    #rooms {
+      width: 80%;
+      max-width: 600px;
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 1.5em;
+      margin-bottom: 1.5em;
+    }
+
+    #rooms div {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75em 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    #rooms div:last-child {
+      border-bottom: none;
+    }
+
+    #rooms button {
+      background-color: #007bff; /* Blue for join buttons */
+      padding: 0.5em 1em;
+      font-size: 0.9em;
+    }
+
+    #rooms button:hover {
+      background-color: #0056b3;
+    }
+
+    /* Status Message */
+    #status {
+      margin-top: 1em;
+      font-size: 1.1em;
+      font-weight: bold;
+      color: #34495e;
+      text-align: center;
+      min-height: 1.5em; /* Ensures space even when empty */
+      width: 100%;
+    }
+
+    /* Game Board */
+    #board {
+      border-collapse: collapse;
+      margin-top: 1.5em;
+      background-color: #ffffff;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      overflow: hidden; /* Ensures border-radius applies to corners */
+    }
+
     #board td {
-  width: 60px; height: 60px;
-  border: 1px solid black;
-  text-align: center;
-  vertical-align: middle;
-  font-size: 40px;
-  cursor: pointer;
-}
-#board td.disabled {
-  cursor: default;
-  background-color: #eee;
-}
+      width: 80px; /* Increased size */
+      height: 80px; /* Increased size */
+      border: 2px solid #a8dadc; /* Slightly thicker and colored border */
+      text-align: center;
+      vertical-align: middle;
+      font-size: 50px; /* Larger font for symbols */
+      font-weight: bold;
+      color: #e63946; /* Red for X/O */
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    #board td:hover:not(.disabled) {
+      background-color: #f1faee; /* Light hover effect */
+    }
+
+    #board td.disabled {
+      cursor: default;
+      background-color: #f8f8f8; /* Lighter background for disabled cells */
+      color: #bbbbbb; /* Faded color for disabled symbols */
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      body {
+        padding: 1em;
+      }
+      h1 {
+        font-size: 2em;
+      }
+      h2 {
+        font-size: 1.5em;
+      }
+      #board td {
+        width: 60px;
+        height: 60px;
+        font-size: 40px;
+      }
+      #rooms {
+        width: 95%;
+        padding: 1em;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .room-controls {
+        flex-direction: column;
+        align-items: center;
+      }
+      button {
+        width: 90%;
+        margin: 0.5em 0;
+      }
+      #board td {
+        width: 50px;
+        height: 50px;
+        font-size: 35px;
+      }
+    }
   </style>
 </head>
 <body>
 
   <h1>🎮 Tic Tac Toe Lobby</h1>
 
-  <button id="createRoomBtn">➕ Create New Room</button>
-  <button id="leaveRoomBtn" disabled>🚪 Leave Room</button>
+  <div class="room-controls">
+    <button id="createRoomBtn">➕ Create New Room</button>
+    <button id="leaveRoomBtn" disabled>🚪 Leave Room</button>
+  </div>
 
   <h2>Available Rooms</h2>
   <div id="rooms"></div>
 
   <div id="status"></div>
+
   <h2>Game Board</h2>
-<table id="board" style="border-collapse: collapse;">
-  <tbody>
-    <tr><td data-row="0" data-col="0"></td><td data-row="0" data-col="1"></td><td data-row="0" data-col="2"></td></tr>
-    <tr><td data-row="1" data-col="0"></td><td data-row="1" data-col="1"></td><td data-row="1" data-col="2"></td></tr>
-    <tr><td data-row="2" data-col="0"></td><td data-row="2" data-col="1"></td><td data-row="2" data-col="2"></td></tr>
-  </tbody>
-</table>
+  <table id="board">
+    <tbody>
+      <tr><td data-row="0" data-col="0"></td><td data-row="0" data-col="1"></td><td data-row="0" data-col="2"></td></tr>
+      <tr><td data-row="1" data-col="0"></td><td data-row="1" data-col="1"></td><td data-row="1" data-col="2"></td></tr>
+      <tr><td data-row="2" data-col="0"></td><td data-row="2" data-col="1"></td><td data-row="2" data-col="2"></td></tr>
+    </tbody>
+  </table>
 
   <script>
+    // Note: The NGROK_API_URL should be updated if your ngrok tunnel changes.
     const NGROK_API_URL = 'https://wren-super-cobra.ngrok-free.app';
     const socket = io(NGROK_API_URL);
 
-let currentRoomID = null;
+    let currentRoomID = null;
+    let myClientID = null;
+    let playerSymbol = '?'; // Initialize playerSymbol
+    let boardCells = [["", "", ""], ["", "", ""], ["", "", ""]];
+    let turn = "";
 
-let myClientID = null;
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+    const roomsDiv = document.getElementById('rooms');
+    const statusDiv = document.getElementById('status');
+    const board = document.getElementById('board');
 
-socket.on('connect', () => {
-  myClientID = socket.id;
-  console.log('[LOG] Connected with client ID:', myClientID);
-});
+    // --- Socket.IO Event Handlers ---
 
-// และใน createRoomBtn.onclick เพิ่มนี้ก่อน join
-if (!myClientID) {
-  myClientID = socket.id;
-}
-
-
-const createRoomBtn = document.getElementById('createRoomBtn');
-const leaveRoomBtn = document.getElementById('leaveRoomBtn');
-const roomsDiv = document.getElementById('rooms');
-const statusDiv = document.getElementById('status');
-
-window.addEventListener('DOMContentLoaded', loadRooms);
-
-async function loadRooms() {
-  console.log("[LOG] Loading rooms from API...");
-  const res = await fetch(`${NGROK_API_URL}/api/rooms`);
-  const data = await res.json();
-  console.log("[LOG] Rooms loaded:", data.rooms);
-  roomsDiv.innerHTML = '';
-
-  data.rooms.forEach(room => {
-    const div = document.createElement('div');
-    div.textContent = `Room ID: ${room.roomID} | Players: ${room.players.length}`;
-    
-    const joinBtn = document.createElement('button');
-    joinBtn.textContent = 'Join';
-    joinBtn.onclick = () => joinRoom(room.roomID);
-
-    div.appendChild(joinBtn);
-    roomsDiv.appendChild(div);
-  });
-}
-
-createRoomBtn.onclick = async () => {
-  console.log("[LOG] Creating new room...");
-  const res = await fetch(`${NGROK_API_URL}/api/rooms`, { method: 'POST' });
-  const data = await res.json();
-  console.log("[LOG] Room created:", data.room.roomID);
-  const roomID = data.room.roomID;
-  await loadRooms();
-  joinRoom(roomID);
-};
-
-leaveRoomBtn.onclick = () => {
-  if (currentRoomID) {
-    console.log("[LOG] Leaving room:", currentRoomID);
-    socket.emit('leaveRoom', currentRoomID);
-    setStatus(`❌ Left room ${currentRoomID}`);
-    currentRoomID = null;
-    leaveRoomBtn.disabled = true;
-  }
-};
-
-function joinRoom(roomID) {
-  if (!myClientID) {
-    console.warn("[WARN] myClientID not set yet. Waiting...");
-    socket.once('connect', () => {
-      joinRoom(roomID); // เรียกซ้ำหลังเชื่อมต่อ
+    socket.on('connect', () => {
+      myClientID = socket.id;
+      console.log('[LOG] Connected with client ID:', myClientID);
+      loadRooms(); // Load rooms immediately upon connection
     });
-    return;
-  }
 
-  console.log("[LOG] Joining room:", roomID);
-  socket.emit('joinRoom', roomID);
-  currentRoomID = roomID;
-  setStatus(`✅ Joined room ${roomID}`);
-  leaveRoomBtn.disabled = false;
-}
+    socket.on('opponent-left', data => {
+      console.log("[LOG] Received opponent-left event:", data);
+      setStatus(`⚠️ Opponent left the room. Room ${data.roomID} is now available.`);
+      currentRoomID = null;
+      leaveRoomBtn.disabled = true;
+      resetBoard(); // Reset board state when opponent leaves
+      loadRooms(); // Refresh rooms to show updated room status
+    });
 
-socket.on('opponent-left', data => {
-  console.log("[LOG] Received opponent-left event:", data);
-  setStatus(`⚠️ Opponent left the room.`);
-});
+    socket.on('error', msg => {
+      console.error("[LOG] Received error event:", msg);
+      alert(`Error: ${msg}`);
+      setStatus(`⚠️ Error: ${msg}`);
+      // Consider more specific error handling, e.g., if room full
+      if (msg.includes("Room is full")) {
+        leaveRoomBtn.disabled = true; // Cannot join if full, so disable leave
+        currentRoomID = null;
+      }
+      loadRooms(); // Reload rooms to reflect current state after an error
+    });
 
-socket.on('error', msg => {
-  console.error("[LOG] Received error event:", msg);
-  alert(`Error: ${msg}`);
-  setStatus(`⚠️ ${msg}`);
-});
+    socket.on('updateBoard', game => {
+      console.log('[LOG] Received updateBoard:', game);
+      boardCells = game.board;
+      turn = game.turn;
+      playerSymbol = getSymbol(game.players); // Pass players array to getSymbol
 
-function setStatus(text) {
-  statusDiv.textContent = text;
-}
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          const cell = board.querySelector(`td[data-row="${i}"][data-col="${j}"]`);
+          cell.textContent = boardCells[i][j];
+          if (game.isOver) {
+            cell.classList.add('disabled');
+          } else {
+            cell.classList.remove('disabled');
+          }
+        }
+      }
 
-function getSymbol(data) {
-  const player = data.players.find(p => p.clientID === myClientID);
-  return player ? player.symbol : '?';
-}
-
-
-const board = document.getElementById('board');
-let playerSymbol = '?';
-
-board.addEventListener('click', e => {
-  if (!currentRoomID) return;
-  if (e.target.tagName !== 'TD') return;
-
-  const row = parseInt(e.target.dataset.row);
-  const col = parseInt(e.target.dataset.col);
-
-  if (turn !== myClientID) {
-    alert("Not your turn!");
-    return;
-  }
-
-  if (boardCells[row][col] !== "") {
-    alert("Cell already taken!");
-    return;
-  }
-
-  socket.emit('makeMove', {
-    RoomID: currentRoomID,
-    Player: myClientID,
-    Row: row,
-    Col: col
-  });
-});
-
-
-let boardCells = [["", "", ""], ["", "", ""], ["", "", ""]];
-let turn = "";
-
-socket.on('updateBoard', game => {
-  console.log('[LOG] Received updateBoard:', game);
-  boardCells = game.board;
-  turn = game.turn;
-  playerSymbol = getSymbol(game);
-
-  for (let i=0; i<3; i++) {
-    for (let j=0; j<3; j++) {
-      const cell = board.querySelector(`td[data-row="${i}"][data-col="${j}"]`);
-      cell.textContent = boardCells[i][j];
       if (game.isOver) {
-        cell.classList.add('disabled');
+        if (game.isDraw) {
+          setStatus("⚖️ Draw game!");
+        } else if (game.winner) {
+          if (game.winner === playerSymbol) {
+            setStatus("🎉 You won!");
+          } else {
+            setStatus(`😞 You lost! (${game.winner} won)`);
+          }
+        }
+        leaveRoomBtn.disabled = false; // Allow leaving after game ends
       } else {
-        cell.classList.remove('disabled');
+        setStatus(`Turn: ${turn === myClientID ? "Your" : "Opponent's"} (${getSymbolForTurn(game.players, turn)})`);
+      }
+    });
+
+    socket.on('start-game', (payload) => {
+      console.log('Received start-game event:', payload);
+      console.log('[LOG] My client ID:', myClientID);
+
+      const me = payload.players.find(p => p.clientID === myClientID);
+      const mySymbol = me ? me.symbol : 'undefined';
+
+      console.log(`🎮 Game started in room ${payload.roomId}. Your symbol: ${mySymbol}`);
+
+      playerSymbol = mySymbol;
+      turn = payload.turn;
+      setStatus(`Game started! Your symbol: ${playerSymbol}. Turn: ${turn === myClientID ? "Your" : "Opponent's"} (${getSymbolForTurn(payload.players, turn)})`);
+      resetBoard(); // Clear board for a new game
+    });
+
+    // --- DOM Event Listeners ---
+
+    window.addEventListener('DOMContentLoaded', loadRooms);
+
+    createRoomBtn.onclick = async () => {
+      console.log("[LOG] Creating new room...");
+      try {
+        const res = await fetch(`${NGROK_API_URL}/api/rooms`, { method: 'POST' });
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+        console.log("[LOG] Room created:", data.room.roomID);
+        const roomID = data.room.roomID;
+        await loadRooms(); // Refresh room list after creation
+        joinRoom(roomID);
+      } catch (error) {
+        console.error("[ERROR] Failed to create room:", error);
+        setStatus("⚠️ Failed to create room.");
+      }
+    };
+
+    leaveRoomBtn.onclick = () => {
+      if (currentRoomID) {
+        console.log("[LOG] Leaving room:", currentRoomID);
+        socket.emit('leaveRoom', currentRoomID);
+        setStatus(`❌ Left room ${currentRoomID}`);
+        currentRoomID = null;
+        leaveRoomBtn.disabled = true;
+        resetBoard(); // Reset board when leaving a room
+        loadRooms(); // Refresh rooms list
+      }
+    };
+
+    board.addEventListener('click', e => {
+      if (!currentRoomID) {
+        alert("Please join a room first!");
+        return;
+      }
+      if (e.target.tagName !== 'TD') return;
+
+      const row = parseInt(e.target.dataset.row);
+      const col = parseInt(e.target.dataset.col);
+
+      if (turn !== myClientID) {
+        alert("It's not your turn!");
+        return;
+      }
+
+      if (boardCells[row][col] !== "") {
+        alert("This cell is already taken!");
+        return;
+      }
+
+      socket.emit('makeMove', {
+        RoomID: currentRoomID,
+        Player: myClientID,
+        Row: row,
+        Col: col
+      });
+    });
+
+    // --- Helper Functions ---
+
+    async function loadRooms() {
+      console.log("[LOG] Loading rooms from API...");
+      try {
+        const res = await fetch(`${NGROK_API_URL}/api/rooms`);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+        console.log("[LOG] Rooms loaded:", data.rooms);
+        roomsDiv.innerHTML = ''; // Clear existing rooms
+
+        if (data.rooms.length === 0) {
+          roomsDiv.textContent = 'No rooms available. Create a new one!';
+          return;
+        }
+
+        data.rooms.forEach(room => {
+          const div = document.createElement('div');
+          const playerCount = room.players ? room.players.length : 0;
+          div.textContent = `Room ID: ${room.roomID} | Players: ${playerCount}/2`;
+
+          // Only show join button if the room is not full and not the current room
+          if (playerCount < 2 && room.roomID !== currentRoomID) {
+            const joinBtn = document.createElement('button');
+            joinBtn.textContent = 'Join';
+            joinBtn.onclick = () => joinRoom(room.roomID);
+            div.appendChild(joinBtn);
+          } else if (room.roomID === currentRoomID) {
+            const span = document.createElement('span');
+            span.textContent = ' (Joined)';
+            span.style.fontWeight = 'bold';
+            span.style.color = '#28a745';
+            div.appendChild(span);
+          } else if (playerCount >= 2) {
+            const span = document.createElement('span');
+            span.textContent = ' (Full)';
+            span.style.color = '#dc3545';
+            div.appendChild(span);
+          }
+
+          roomsDiv.appendChild(div);
+        });
+      } catch (error) {
+        console.error("[ERROR] Failed to load rooms:", error);
+        roomsDiv.textContent = 'Failed to load rooms. Please try again later.';
+        setStatus("⚠️ Failed to load rooms.");
       }
     }
-  }
 
-  if (game.isOver) {
-    if (game.isDraw) {
-      setStatus("⚖️ Draw game!");
-    } else if (game.winner) {
-      if (game.winner === playerSymbol) {
-        setStatus("🎉 You won!");
-      } else {
-        setStatus("😞 You lost!");
+    function joinRoom(roomID) {
+      if (!myClientID) {
+        console.warn("[WARN] myClientID not set yet. Waiting for 'connect' event...");
+        socket.once('connect', () => {
+          joinRoom(roomID); // Retry joining once connected
+        });
+        return;
       }
+
+      if (currentRoomID && currentRoomID !== roomID) {
+        // Optionally, ask user if they want to leave current room first
+        if (!confirm(`You are already in room ${currentRoomID}. Do you want to leave it and join ${roomID}?`)) {
+          return;
+        }
+        socket.emit('leaveRoom', currentRoomID);
+      }
+
+      console.log("[LOG] Attempting to join room:", roomID);
+      socket.emit('joinRoom', roomID);
+      currentRoomID = roomID;
+      setStatus(`✅ Attempting to join room ${roomID}...`);
+      leaveRoomBtn.disabled = false;
+      loadRooms(); // Refresh rooms list to update joined status
     }
-  } else {
-    setStatus(`Turn: ${turn === myClientID ? "Your" : "Opponent's"}`);
-  }
-});
 
-socket.on('start-game', (payload) => {
-  console.log('Received start-game event:', payload);
-  console.log('[LOG] My client ID:', myClientID);
+    function setStatus(text) {
+      statusDiv.textContent = text;
+    }
 
-  const me = payload.players.find(p => p.clientID === myClientID);
-  const mySymbol = me ? me.symbol : 'undefined';
+    // Helper to get player's symbol based on clientID from players array
+    function getSymbol(playersArray) {
+      const player = playersArray.find(p => p.clientID === myClientID);
+      return player ? player.symbol : '?';
+    }
 
-  console.log(`🎮 Game started in room ${payload.roomId}. Your symbol: ${mySymbol}`);
+    // Helper to get symbol of the player whose turn it is
+    function getSymbolForTurn(playersArray, clientID) {
+        const player = playersArray.find(p => p.clientID === clientID);
+        return player ? player.symbol : '?';
+    }
 
-  playerSymbol = mySymbol;
-  turn = payload.turn;
-  setStatus(`Game started! Your symbol: ${playerSymbol}. Turn: ${turn === myClientID ? "Your" : "Opponent's"}`);
-});
+    function resetBoard() {
+      boardCells = [["", "", ""], ["", "", ""], ["", "", ""]];
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          const cell = board.querySelector(`td[data-row="${i}"][data-col="${j}"]`);
+          cell.textContent = "";
+          cell.classList.remove('disabled');
+        }
+      }
+      turn = ""; // Reset turn
+    }
   </script>
 </body>
 </html>
