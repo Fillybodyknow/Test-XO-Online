@@ -12,15 +12,21 @@
 
   <table id="board" class="border border-gray-400">
     <tbody>
-      ${[0,1,2].map(row => `
-        <tr>
-          ${[0,1,2].map(col => `
-            <td data-row="${row}" data-col="${col}" 
-              class="w-20 h-20 border text-center text-3xl cursor-pointer bg-white hover:bg-gray-100 transition">
-            </td>
-          `).join('')}
-        </tr>
-      `).join('')}
+      <tr>
+        <td data-row="0" data-col="0" class="w-20 h-20 border text-center text-3xl cursor-pointer bg-white hover:bg-gray-100 transition"></td>
+        <td data-row="0" data-col="1" class="w-20 h-20 border text-center text-3xl cursor-pointer bg-white hover:bg-gray-100 transition"></td>
+        <td data-row="0" data-col="2" class="w-20 h-20 border text-center text-3xl cursor-pointer bg-white hover:bg-gray-100 transition"></td>
+      </tr>
+      <tr>
+        <td data-row="1" data-col="0" class="w-20 h-20 border text-center text-3xl cursor-pointer bg-white hover:bg-gray-100 transition"></td>
+        <td data-row="1" data-col="1" class="w-20 h-20 border text-center text-3xl cursor-pointer bg-white hover:bg-gray-100 transition"></td>
+        <td data-row="1" data-col="2" class="w-20 h-20 border text-center text-3xl cursor-pointer bg-white hover:bg-gray-100 transition"></td>
+      </tr>
+      <tr>
+        <td data-row="2" data-col="0" class="w-20 h-20 border text-center text-3xl cursor-pointer bg-white hover:bg-gray-100 transition"></td>
+        <td data-row="2" data-col="1" class="w-20 h-20 border text-center text-3xl cursor-pointer bg-white hover:bg-gray-100 transition"></td>
+        <td data-row="2" data-col="2" class="w-20 h-20 border text-center text-3xl cursor-pointer bg-white hover:bg-gray-100 transition"></td>
+      </tr>
     </tbody>
   </table>
 
@@ -32,7 +38,7 @@
   </button>
 
   <script>
-    const NGROK_URL = 'https://wren-super-cobra.ngrok-free.app';
+    const NGROK_URL = 'https://wren-super-cobra.ngrok-free.app'; // เปลี่ยนเป็น backend URL จริงของคุณ
     const socket = io(NGROK_URL);
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -51,8 +57,10 @@
     }
 
     function leaveGame() {
-      if (roomId) socket.emit('leaveRoom', roomId);
-      window.location.href = 'index.html';
+      if (currentRoomID) {
+        socket.emit('leaveRoom', currentRoomID);
+      }
+      window.location.href = 'index.html'; // หรือเปลี่ยนเป็น lobby.html ถ้าคุณใช้ชื่อนั้น
     }
 
     function getSymbol(data) {
@@ -66,8 +74,14 @@
       const row = parseInt(e.target.dataset.row);
       const col = parseInt(e.target.dataset.col);
 
-      if (turn !== myClientID || boardCells[row][col] !== "") {
-        return alert("❌ Invalid move.");
+      if (turn !== myClientID) {
+        alert("Not your turn!");
+        return;
+      }
+
+      if (boardCells[row][col] !== "") {
+        alert("Cell already taken!");
+        return;
       }
 
       socket.emit('makeMove', {
@@ -80,11 +94,13 @@
 
     socket.on('connect', () => {
       myClientID = socket.id;
+      console.log("[LOG] Connected with ID:", myClientID);
       socket.emit('joinRoom', roomId);
       setStatus(`🔌 Connected. Joining room ${roomId}...`);
     });
 
     socket.on('start-game', payload => {
+      console.log("[LOG] start-game", payload);
       const me = payload.players.find(p => p.clientID === myClientID);
       playerSymbol = me ? me.symbol : '?';
       turn = payload.turn;
@@ -92,6 +108,7 @@
     });
 
     socket.on('updateBoard', game => {
+      console.log('[LOG] updateBoard:', game);
       boardCells = game.board;
       turn = game.turn;
       playerSymbol = getSymbol(game);
@@ -100,13 +117,21 @@
         for (let j = 0; j < 3; j++) {
           const cell = board.querySelector(`td[data-row="${i}"][data-col="${j}"]`);
           cell.textContent = boardCells[i][j];
-          cell.classList.toggle("bg-gray-200", game.isOver);
+          cell.classList.toggle('bg-gray-200', game.isOver);
+          if(game.isOver) {
+            cell.style.cursor = 'default';
+          } else {
+            cell.style.cursor = 'pointer';
+          }
         }
       }
 
       if (game.isOver) {
-        setStatus(game.isDraw ? "⚖️ It's a draw!" :
-          (game.winner === playerSymbol ? "🎉 You won!" : "😢 You lost!"));
+        if (game.isDraw) {
+          setStatus("⚖️ It's a draw!");
+        } else if (game.winner) {
+          setStatus(game.winner === playerSymbol ? "🎉 You won!" : "😢 You lost!");
+        }
       } else {
         setStatus(`Turn: ${turn === myClientID ? "Your" : "Opponent's"}`);
       }
@@ -121,5 +146,6 @@
       setStatus(`❌ ${msg}`);
     });
   </script>
+
 </body>
 </html>
