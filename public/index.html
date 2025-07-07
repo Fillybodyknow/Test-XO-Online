@@ -1,199 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tic Tac Toe Lobby</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #4CAF50;
-            --secondary-color: #2196F3;
-            --background-color: #f0f2f5;
-            --card-background: #ffffff;
-            --text-color: #333;
-            --border-color: #ddd;
-            --button-hover: #45a049;
-            --button-create-hover: #1976D2;
-        }
-
-        body {
-            font-family: 'Poppins', sans-serif;
-            margin: 0;
-            padding: 2em;
-            background: linear-gradient(to right, #ece9e6, var(--background-color));
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        h1, h2 {
-            color: var(--text-color);
-            text-align: center;
-            margin-bottom: 1em;
-        }
-
-        h1 {
-            font-size: 2.8em;
-            color: var(--primary-color);
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-        }
-
-        h2 {
-            font-size: 2em;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 0.5em;
-            margin-top: 2em;
-            width: 100%;
-            max-width: 600px;
-            text-align: left;
-        }
-
-        button {
-            background-color: var(--secondary-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.8em 1.8em;
-            font-size: 1.1em;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            margin-bottom: 2em;
-            align-self: center; /* Center the create room button */
-        }
-
-        button:hover {
-            background-color: var(--button-create-hover);
-            transform: translateY(-2px);
-        }
-
-        button:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .room-container {
-            width: 100%;
-            max-width: 600px;
-            background-color: var(--card-background);
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-            padding: 2em;
-            margin-top: 1em;
-        }
-
-        .room {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.8em 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .room:last-child {
-            border-bottom: none;
-        }
-
-        .room-info {
-            font-size: 1.1em;
-        }
-
-        .room-join-btn {
-            background-color: var(--primary-color);
-            padding: 0.6em 1.2em;
-            font-size: 0.95em;
-            border-radius: 5px;
-            box-shadow: none;
-        }
-
-        .room-join-btn:hover {
-            background-color: var(--button-hover);
-        }
-
-        #rooms {
-            font-style: italic;
-            color: #666;
-            text-align: center;
-            padding: 1em 0;
-        }
-
-        .error-message {
-            color: #D32F2F;
-            font-weight: 600;
-            text-align: center;
-            margin-top: 1em;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Tic Tac Toe Lobby</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2em;
+    }
+    button {
+      margin: 0.5em 0;
+      padding: 0.5em 1em;
+    }
+    .room {
+      margin-bottom: 1em;
+    }
+  </style>
 </head>
 <body>
 
-    <h1>🎮 Tic Tac Toe Lobby</h1>
+  <h1>🎮 Tic Tac Toe Lobby</h1>
 
-    <button onclick="createRoom()">➕ Create New Game Room</button>
+  <button onclick="createRoom()">➕ Create Room</button>
 
-    <h2>Available Games</h2>
-    <div id="rooms" class="room-container">Loading...</div>
+  <h2>Available Rooms</h2>
+  <div id="rooms">Loading...</div>
 
-    <script>
-        const NGROK_API_URL = 'https://wren-super-cobra.ngrok-free.app'; // Adjust to your ngrok URL
+  <script>
+    const NGROK_API_URL = 'https://wren-super-cobra.ngrok-free.app'; // ปรับให้ตรงกับ ngrok ของคุณ
 
-        async function createRoom() {
-            try {
-                const res = await fetch(`${NGROK_API_URL}/api/rooms`, {
-                    method: 'POST'
-                });
-                const data = await res.json();
-                const roomId = data.room.roomID;
-                window.location.href = `game.html?roomId=${roomId}`;
-            } catch (err) {
-                alert("❌ Failed to create room. Please try again.");
-                console.error("Error creating room:", err);
-                const roomsDiv = document.getElementById('rooms');
-                roomsDiv.innerHTML = '<div class="error-message">Failed to create room. Please check your connection.</div>';
-            }
+    async function createRoom() {
+      try {
+        const res = await fetch(`${NGROK_API_URL}/api/rooms`, {
+          method: 'POST'
+        });
+        const data = await res.json();
+        const roomId = data.room.roomID;
+        window.location.href = `game.html?roomId=${roomId}`;
+      } catch (err) {
+        alert("❌ Failed to create room.");
+        console.error(err);
+      }
+    }
+
+    async function loadRooms() {
+      try {
+        const res = await fetch(`${NGROK_API_URL}/api/rooms`);
+        const data = await res.json();
+        const roomsDiv = document.getElementById('rooms');
+        roomsDiv.innerHTML = '';
+
+        if (data.rooms.length === 0) {
+          roomsDiv.textContent = 'No rooms available.';
         }
 
-        async function loadRooms() {
-            try {
-                const res = await fetch(`${NGROK_API_URL}/api/rooms`);
-                if (!res.ok) {
-                    throw new Error(`HTTP error! status: ${res.status}`);
-                }
-                const data = await res.json();
-                const roomsDiv = document.getElementById('rooms');
-                roomsDiv.innerHTML = ''; // Clear loading text
+        data.rooms.forEach(room => {
+          const div = document.createElement('div');
+          div.className = 'room';
+          div.textContent = `Room ID: ${room.roomID} | Players: ${room.players.length} `;
 
-                if (data.rooms.length === 0) {
-                    roomsDiv.textContent = 'No game rooms currently available. Be the first to create one!';
-                } else {
-                    data.rooms.forEach(room => {
-                        const div = document.createElement('div');
-                        div.className = 'room';
-                        div.innerHTML = `
-                            <span class="room-info">Room ID: <strong>${room.roomID}</strong> | Players: ${room.players.length}/2 </span>
-                            <button class="room-join-btn" onclick="joinRoom('${room.roomID}')">Join Game</button>
-                        `;
-                        roomsDiv.appendChild(div);
-                    });
-                }
-            } catch (err) {
-                console.error("Error loading rooms:", err);
-                const roomsDiv = document.getElementById('rooms');
-                roomsDiv.innerHTML = '<div class="error-message">❌ Failed to load rooms. Please refresh or check the server status.</div>';
-            }
-        }
+          const joinBtn = document.createElement('button');
+          joinBtn.textContent = 'Join';
+          joinBtn.onclick = () => {
+            window.location.href = `game.html?roomId=${room.roomID}`;
+          };
 
-        function joinRoom(roomId) {
-            window.location.href = `game.html?roomId=${roomId}`;
-        }
+          div.appendChild(joinBtn);
+          roomsDiv.appendChild(div);
+        });
+      } catch (err) {
+        document.getElementById('rooms').textContent = '❌ Failed to load rooms.';
+        console.error(err);
+      }
+    }
 
-        window.addEventListener('DOMContentLoaded', loadRooms);
-        // Optional: Refresh rooms every few seconds
-        // setInterval(loadRooms, 5000);
-    </script>
+    window.addEventListener('DOMContentLoaded', loadRooms);
+  </script>
 
 </body>
 </html>

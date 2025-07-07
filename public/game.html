@@ -1,307 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tic Tac Toe Game</title>
-    <script src="https://cdn.socket.io/socket.io-1.7.0.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #4CAF50; /* Green */
-            --secondary-color: #FFC107; /* Amber */
-            --accent-color: #FF5722; /* Deep Orange for X */
-            --accent-color-o: #2196F3; /* Blue for O */
-            --background-color: #f0f2f5;
-            --card-background: #ffffff;
-            --text-color: #333;
-            --border-color: #bbb;
-            --status-bg: #e0e0e0;
-            --disabled-bg: #eee;
-            --winning-cell-bg: #c8e6c9; /* Light green */
-        }
-
-        body {
-            font-family: 'Poppins', sans-serif;
-            margin: 0;
-            padding: 2em;
-            background: linear-gradient(to bottom right, #e0eafc, #cfdef3); /* Subtle gradient */
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            text-align: center;
-        }
-
-        h1 {
-            font-family: 'Press Start 2P', cursive;
-            font-size: 2.5em;
-            color: var(--text-color);
-            margin-bottom: 0.8em;
-            text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
-        }
-
-        #game-container {
-            background-color: var(--card-background);
-            border-radius: 15px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-            padding: 2.5em;
-            margin-top: 1em;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        #board {
-            border-collapse: collapse;
-            margin-bottom: 1.5em;
-            background-color: #f9f9f9;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            overflow: hidden; /* For rounded corners to apply to cells */
-        }
-
-        #board td {
-            width: 90px;
-            height: 90px;
-            border: 2px solid var(--border-color);
-            text-align: center;
-            vertical-align: middle;
-            font-size: 55px; /* Larger symbol */
-            font-weight: 700;
-            cursor: pointer;
-            transition: background-color 0.2s ease, transform 0.1s ease;
-            color: var(--text-color); /* Default color for symbol */
-        }
-
-        #board td:hover:not(.disabled) {
-            background-color: #f0f0f0;
-        }
-
-        #board td.disabled {
-            cursor: default;
-            background-color: var(--disabled-bg);
-            opacity: 0.7;
-        }
-
-        #board td:nth-child(1) { border-left: none; }
-        #board td:nth-child(3) { border-right: none; }
-        tr:first-child td { border-top: none; }
-        tr:last-child td { border-bottom: none; }
-
-        #board td[data-player="X"] {
-            color: var(--accent-color);
-        }
-
-        #board td[data-player="O"] {
-            color: var(--accent-color-o);
-        }
-
-        #status {
-            background-color: var(--status-bg);
-            padding: 0.8em 1.5em;
-            border-radius: 8px;
-            margin-bottom: 2em;
-            font-size: 1.2em;
-            font-weight: 600;
-            color: var(--text-color);
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-            min-width: 300px;
-        }
-
-        button {
-            background-color: #607D8B; /* Grey for back button */
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.7em 1.5em;
-            font-size: 1em;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        button:hover {
-            background-color: #546E7A;
-            transform: translateY(-2px);
-        }
-
-        button:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .win-line {
-            background-color: var(--winning-cell-bg) !important;
-            animation: highlightWin 1s ease-in-out forwards;
-        }
-
-        @keyframes highlightWin {
-            0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
-            100% { box-shadow: 0 0 15px 5px rgba(76, 175, 80, 0); }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Tic Tac Toe Game</title>
+  <script src="https://cdn.socket.io/socket.io-1.7.0.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2em;
+    }
+    #board td {
+      width: 60px; height: 60px;
+      border: 1px solid black;
+      text-align: center;
+      vertical-align: middle;
+      font-size: 40px;
+      cursor: pointer;
+    }
+    #board td.disabled {
+      cursor: default;
+      background-color: #eee;
+    }
+    #status {
+      margin-top: 1em;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
 
-    <h1>❌ Tic Tac Toe ⭕</h1>
+  <h1>❌ Tic Tac Toe ⭕</h1>
 
-    <div id="game-container">
-        <table id="board">
-            <tbody>
-                <tr><td data-row="0" data-col="0"></td><td data-row="0" data-col="1"></td><td data-row="0" data-col="2"></td></tr>
-                <tr><td data-row="1" data-col="0"></td><td data-row="1" data-col="1"></td><td data-row="1" data-col="2"></td></tr>
-                <tr><td data-row="2" data-col="0"></td><td data-row="2" data-col="1"></td><td data-row="2" data-col="2"></td></tr>
-            </tbody>
-        </table>
+  <table id="board" style="border-collapse: collapse;">
+    <tbody>
+      <tr><td data-row="0" data-col="0"></td><td data-row="0" data-col="1"></td><td data-row="0" data-col="2"></td></tr>
+      <tr><td data-row="1" data-col="0"></td><td data-row="1" data-col="1"></td><td data-row="1" data-col="2"></td></tr>
+      <tr><td data-row="2" data-col="0"></td><td data-row="2" data-col="1"></td><td data-row="2" data-col="2"></td></tr>
+    </tbody>
+  </table>
 
-        <div id="status">Waiting for game to start...</div>
-        <button onclick="leaveGame()">← Back to Lobby</button>
-    </div>
+  <div id="status">Waiting for game to start...</div>
+  <button onclick="leaveGame()">← Back to Lobby</button>
 
-    <script>
-        const NGROK_URL = 'https://wren-super-cobra.ngrok-free.app'; // Change URL to match your backend
-        const socket = io(NGROK_URL);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const roomId = urlParams.get('roomId');
-        let myClientID = null;
-        let currentRoomID = roomId;
-        let playerSymbol = '?';
-        let boardCells = [["", "", ""], ["", "", ""], ["", "", ""]];
-        let turn = "";
 
-        const board = document.getElementById('board');
-        const statusDiv = document.getElementById('status');
+  <script>
+    const NGROK_URL = 'https://wren-super-cobra.ngrok-free.app'; // เปลี่ยน URL ให้ตรงกับ backend ของคุณ
+    const socket = io(NGROK_URL);
 
-        function setStatus(text) {
-            statusDiv.textContent = text;
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('roomId');
+    let myClientID = null;
+    let currentRoomID = roomId;
+    let playerSymbol = '?';
+    let boardCells = [["", "", ""], ["", "", ""], ["", "", ""]];
+    let turn = "";
+
+    const board = document.getElementById('board');
+    const statusDiv = document.getElementById('status');
+
+    function setStatus(text) {
+      statusDiv.textContent = text;
+    }
+
+    function leaveGame() {
+  if (roomId) {
+    socket.emit('leaveRoom', roomId);  // แจ้ง backend ว่าออกห้อง
+  }
+  window.location.href = 'index.html';  // กลับไป lobby
+}
+
+
+    function getSymbol(data) {
+      const player = data.players.find(p => p.clientID === myClientID);
+      return player ? player.symbol : '?';
+    }
+
+    board.addEventListener('click', e => {
+      if (!currentRoomID) return;
+      if (e.target.tagName !== 'TD') return;
+
+      const row = parseInt(e.target.dataset.row);
+      const col = parseInt(e.target.dataset.col);
+
+      if (turn !== myClientID) {
+        alert("Not your turn!");
+        return;
+      }
+
+      if (boardCells[row][col] !== "") {
+        alert("Cell already taken!");
+        return;
+      }
+
+      socket.emit('makeMove', {
+        RoomID: currentRoomID,
+        Player: myClientID,
+        Row: row,
+        Col: col
+      });
+    });
+
+    socket.on('connect', () => {
+      myClientID = socket.id;
+      console.log("[LOG] Connected with ID:", myClientID);
+      socket.emit('joinRoom', roomId);
+      setStatus(`🔌 Connected. Joining room ${roomId}...`);
+    });
+
+    socket.on('start-game', (payload) => {
+      console.log("[LOG] start-game", payload);
+      const me = payload.players.find(p => p.clientID === myClientID);
+      playerSymbol = me ? me.symbol : '?';
+      turn = payload.turn;
+      setStatus(`Game started! You are ${playerSymbol}. ${turn === myClientID ? "Your turn." : "Opponent's turn."}`);
+    });
+
+    socket.on('updateBoard', game => {
+      console.log('[LOG] updateBoard:', game);
+      boardCells = game.board;
+      turn = game.turn;
+      playerSymbol = getSymbol(game);
+
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          const cell = board.querySelector(`td[data-row="${i}"][data-col="${j}"]`);
+          cell.textContent = boardCells[i][j];
+          if (game.isOver) {
+            cell.classList.add('disabled');
+          } else {
+            cell.classList.remove('disabled');
+          }
         }
+      }
 
-        function leaveGame() {
-            if (roomId) {
-                socket.emit('leaveRoom', roomId); // Notify backend about leaving the room
-            }
-            window.location.href = 'index.html'; // Go back to lobby
+      if (game.isOver) {
+        if (game.isDraw) {
+          setStatus("⚖️ It's a draw!");
+        } else if (game.winner) {
+          setStatus(game.winner === playerSymbol ? "🎉 You won!" : "😢 You lost!");
         }
+      } else {
+        setStatus(`Turn: ${turn === myClientID ? "Your" : "Opponent's"}`);
+      }
+    });
 
-        function getSymbol(data) {
-            const player = data.players.find(p => p.clientID === myClientID);
-            return player ? player.symbol : '?';
-        }
+    socket.on('opponent-left', () => {
+      setStatus("⚠️ Opponent left the game.");
+    });
 
-        board.addEventListener('click', e => {
-            if (!currentRoomID) return;
-            if (e.target.tagName !== 'TD') return;
-
-            const row = parseInt(e.target.dataset.row);
-            const col = parseInt(e.target.dataset.col);
-
-            if (turn !== myClientID) {
-                alert("It's not your turn!");
-                return;
-            }
-
-            if (boardCells[row][col] !== "") {
-                alert("This cell is already taken. Please choose another!");
-                return;
-            }
-            console.log("Cell clicked:", row, col);
-console.log("Current turn:", turn, "My ID:", myClientID);
-console.log("Board state for clicked cell:", boardCells[row][col]);
-
-            console.log("Attempting to emit makeMove:", {
-    RoomID: currentRoomID,
-    Player: myClientID,
-    Row: row,
-    Col: col
-});
-
-            socket.emit('makeMove', {
-                RoomID: currentRoomID,
-                Player: myClientID,
-                Row: row,
-                Col: col
-            });
-        });
-
-        socket.on('connect', () => {
-            myClientID = socket.id;
-            console.log("[LOG] Connected with ID:", myClientID);
-            socket.emit('joinRoom', roomId);
-            setStatus(`🔌 Connected. Joining room ${roomId}...`);
-        });
-
-        socket.on('start-game', (payload) => {
-            console.log("[LOG] start-game", payload);
-            const me = payload.players.find(p => p.clientID === myClientID);
-            playerSymbol = me ? me.symbol : '?';
-            turn = payload.turn;
-            setStatus(`Game started! You are ${playerSymbol}. ${turn === myClientID ? "Your turn!" : "Opponent's turn."}`);
-            updateBoardDisplay(payload); // Initial board update
-        });
-
-        socket.on('updateBoard', game => {
-            console.log('[LOG] updateBoard:', game);
-            boardCells = game.board;
-            turn = game.turn;
-            playerSymbol = getSymbol(game);
-            updateBoardDisplay(game);
-
-            if (game.isOver) {
-                if (game.isDraw) {
-                    setStatus("⚖️ It's a draw!");
-                } else if (game.winner) {
-                    setStatus(game.winner === playerSymbol ? "🎉 You won!" : `😢 ${game.winner} won!`);
-                    if (game.winningLine) {
-                        highlightWinningCells(game.winningLine);
-                    }
-                }
-                // Disable all cells when game is over
-                Array.from(board.querySelectorAll('td')).forEach(cell => cell.classList.add('disabled'));
-            } else {
-                setStatus(`Turn: ${turn === myClientID ? "Your turn" : "Opponent's turn"}`);
-            }
-            console.log("Received updateBoard event. Game state:", game);
-        });
-
-        function updateBoardDisplay(game) {
-            for (let i = 0; i < 3; i++) {
-                for (let j = 0; j < 3; j++) {
-                    const cell = board.querySelector(`td[data-row="${i}"][data-col="${j}"]`);
-                    cell.textContent = game.board[i][j];
-                    cell.setAttribute('data-player', game.board[i][j]); // For styling X/O
-                    if (game.isOver) {
-                        cell.classList.add('disabled');
-                    } else {
-                        cell.classList.remove('disabled');
-                    }
-                }
-            }
-        }
-
-        function highlightWinningCells(line) {
-            line.forEach(coords => {
-                const cell = board.querySelector(`td[data-row="${coords[0]}"][data-col="${coords[1]}"]`);
-                if (cell) {
-                    cell.classList.add('win-line');
-                }
-            });
-        }
-
-        socket.on('opponent-left', () => {
-            setStatus("⚠️ Your opponent has left the game.");
-            // Optionally disable board or offer to go back to lobby
-            Array.from(board.querySelectorAll('td')).forEach(cell => cell.classList.add('disabled'));
-        });
-
-        socket.on('error', msg => {
-            alert(`Error: ${msg}`);
-            setStatus(`❌ Error: ${msg}`);
-            // Consider redirecting to lobby or providing recovery options
-        });
-    </script>
+    socket.on('error', msg => {
+      alert(`Error: ${msg}`);
+      setStatus(`❌ ${msg}`);
+    });
+  </script>
 
 </body>
 </html>
