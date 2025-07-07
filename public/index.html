@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tic Tac Toe Lobby</title>
+  <script src="https://cdn.socket.io/socket.io-1.7.0.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    button { margin: 0.25em 0; }
+    #rooms button { margin-left: 1em; }
+    #board td {
+  width: 60px; height: 60px;
+  border: 1px solid black;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 40px;
+  cursor: pointer;
+}
+#board td.disabled {
+  cursor: default;
+  background-color: #eee;
+}
+  </style>
+</head>
+<body>
+
+  <h1>🎮 Tic Tac Toe Lobby</h1>
+
+  <button id="createRoomBtn">➕ Create New Room</button>
+  <button id="leaveRoomBtn" disabled>🚪 Leave Room</button>
+
+  <h2>Available Rooms</h2>
+  <div id="rooms"></div>
+
+  <div id="status"></div>
+  <h2>Game Board</h2>
+<table id="board" style="border-collapse: collapse;">
+  <tbody>
+    <tr><td data-row="0" data-col="0"></td><td data-row="0" data-col="1"></td><td data-row="0" data-col="2"></td></tr>
+    <tr><td data-row="1" data-col="0"></td><td data-row="1" data-col="1"></td><td data-row="1" data-col="2"></td></tr>
+    <tr><td data-row="2" data-col="0"></td><td data-row="2" data-col="1"></td><td data-row="2" data-col="2"></td></tr>
+  </tbody>
+</table>
+
+  <script>
+    const NGROK_API_URL = 'https://wren-super-cobra.ngrok-free.app';
+    const socket = io(NGROK_API_URL);
+
+let currentRoomID = null;
+
+let myClientID = null;
+
+socket.on('connect', () => {
+  myClientID = socket.id;
+  console.log('[LOG] Connected with client ID:', myClientID);
+});
+
+// และใน createRoomBtn.onclick เพิ่มนี้ก่อน join
+if (!myClientID) {
+  myClientID = socket.id;
+}
+
+
+const createRoomBtn = document.getElementById('createRoomBtn');
+const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+const roomsDiv = document.getElementById('rooms');
+const statusDiv = document.getElementById('status');
+
+window.addEventListener('DOMContentLoaded', loadRooms);
+
+async function loadRooms() {
+  console.log("[LOG] Loading rooms from API...");
+  const res = await fetch(`${NGROK_API_URL}/api/rooms`);
+  const data = await res.json();
+  console.log("[LOG] Rooms loaded:", data.rooms);
+  roomsDiv.innerHTML = '';
+
+  data.rooms.forEach(room => {
+    const div = document.createElement('div');
+    div.textContent = `Room ID: ${room.roomID} | Players: ${room.players.length}`;
+    
+    const joinBtn = document.createElement('button');
+    joinBtn.textContent = 'Join';
+    joinBtn.onclick = () => joinRoom(room.roomID);
+
+    div.appendChild(joinBtn);
+    roomsDiv.appendChild(div);
+  });
+}
+
+createRoomBtn.onclick = async () => {
+  console.log("[LOG] Creating new room...");
+  const res = await fetch(`${NGROK_API_URL}/api/rooms`, { method: 'POST' });
+  const data = await res.json();
+  console.log("[LOG] Room created:", data.room.roomID);
+  const roomID = data.room.roomID;
+  await loadRooms();
+  joinRoom(roomID);
+};
+
+leaveRoomBtn.onclick = () => {
+  if (currentRoomID) {
+    console.log("[LOG] Leaving room:", currentRoomID);
+    socket.emit('leaveRoom', currentRoomID);
+    setStatus(`❌ Left room ${currentRoomID}`);
+    currentRoomID = null;
+    leaveRoomBtn.disabled = true;
+  }
+};
+
+function joinRoom(roomID) {
+  if (!myClientID) {
+    console.warn("[WARN] myClientID not set yet. Waiting...");
+    socket.once('connect', () => {
+      joinRoom(roomID); // เรียกซ้ำหลังเชื่อมต่อ
+    });
+    return;
+  }
+
+  console.log("[LOG] Joining room:", roomID);
+  socket.emit('joinRoom', roomID);
+  currentRoomID = roomID;
+  setStatus(`✅ Joined room ${roomID}`);
+  leaveRoomBtn.disabled = false;
+}
+
+socket.on('opponent-left', data => {
+  console.log("[LOG] Received opponent-left event:", data);
+  setStatus(`⚠️ Opponent left the room.`);
+});
+
+socket.on('error', msg => {
+  console.error("[LOG] Received error event:", msg);
+  alert(`Error: ${msg}`);
+  setStatus(`⚠️ ${msg}`);
+});
+
+function setStatus(text) {
+  statusDiv.textContent = text;
+}
+
+function getSymbol(data) {
+  const player = data.players.find(p => p.clientID === myClientID);
+  return player ? player.symbol : '?';
+}
+
+
+const board = document.getElementById('board');
+let playerSymbol = '?';
+
+board.addEventListener('click', e => {
+  if (!currentRoomID) return;
+  if (e.target.tagName !== 'TD') return;
+
+  const row = parseInt(e.target.dataset.row);
+  const col = parseInt(e.target.dataset.col);
+
+  if (turn !== myClientID) {
+    alert("Not your turn!");
+    return;
+  }
+
+  if (boardCells[row][col] !== "") {
+    alert("Cell already taken!");
+    return;
+  }
+
+  socket.emit('makeMove', {
+    RoomID: currentRoomID,
+    Player: myClientID,
+    Row: row,
+    Col: col
+  });
+});
+
+
+let boardCells = [["", "", ""], ["", "", ""], ["", "", ""]];
+let turn = "";
+
+socket.on('updateBoard', game => {
+  console.log('[LOG] Received updateBoard:', game);
+  boardCells = game.board;
+  turn = game.turn;
+  playerSymbol = getSymbol(game);
+
+  for (let i=0; i<3; i++) {
+    for (let j=0; j<3; j++) {
+      const cell = board.querySelector(`td[data-row="${i}"][data-col="${j}"]`);
+      cell.textContent = boardCells[i][j];
+      if (game.isOver) {
+        cell.classList.add('disabled');
+      } else {
+        cell.classList.remove('disabled');
+      }
+    }
+  }
+
+  if (game.isOver) {
+    if (game.isDraw) {
+      setStatus("⚖️ Draw game!");
+    } else if (game.winner) {
+      if (game.winner === playerSymbol) {
+        setStatus("🎉 You won!");
+      } else {
+        setStatus("😞 You lost!");
+      }
+    }
+  } else {
+    setStatus(`Turn: ${turn === myClientID ? "Your" : "Opponent's"}`);
+  }
+});
+
+socket.on('start-game', (payload) => {
+  console.log('Received start-game event:', payload);
+  console.log('[LOG] My client ID:', myClientID);
+
+  const me = payload.players.find(p => p.clientID === myClientID);
+  const mySymbol = me ? me.symbol : 'undefined';
+
+  console.log(`🎮 Game started in room ${payload.roomId}. Your symbol: ${mySymbol}`);
+
+  playerSymbol = mySymbol;
+  turn = payload.turn;
+  setStatus(`Game started! Your symbol: ${playerSymbol}. Turn: ${turn === myClientID ? "Your" : "Opponent's"}`);
+});
+  </script>
+</body>
+</html>
