@@ -1,39 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Tic Tac Toe Lobby</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      margin: 2em;
-    }
-    button {
-      margin: 0.5em 0;
-      padding: 0.5em 1em;
-    }
-    .room {
-      margin-bottom: 1em;
-    }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col items-center py-10">
 
-  <h1>🎮 Tic Tac Toe Lobby</h1>
+  <h1 class="text-4xl font-bold mb-6">🎮 Tic Tac Toe Lobby</h1>
 
-  <button onclick="createRoom()">➕ Create Room</button>
+  <button onclick="createRoom()"
+    class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition mb-8">
+    ➕ Create Room
+  </button>
 
-  <h2>Available Rooms</h2>
-  <div id="rooms">Loading...</div>
+  <h2 class="text-2xl font-semibold mb-4">Available Rooms</h2>
+
+  <div id="rooms" class="w-full max-w-md space-y-4">Loading...</div>
 
   <script>
-    const NGROK_API_URL = 'https://wren-super-cobra.ngrok-free.app'; // ปรับให้ตรงกับ ngrok ของคุณ
+    const NGROK_API_URL = 'https://wren-super-cobra.ngrok-free.app';
 
     async function createRoom() {
       try {
-        const res = await fetch(`${NGROK_API_URL}/api/rooms`, {
-          method: 'POST'
-        });
+        const res = await fetch(`${NGROK_API_URL}/api/rooms`, { method: 'POST' });
         const data = await res.json();
         const roomId = data.room.roomID;
         window.location.href = `game.html?roomId=${roomId}`;
@@ -51,15 +41,19 @@
         roomsDiv.innerHTML = '';
 
         if (data.rooms.length === 0) {
-          roomsDiv.textContent = 'No rooms available.';
+          roomsDiv.innerHTML = '<p class="text-center text-gray-500">No rooms available.</p>';
         }
 
         data.rooms.forEach(room => {
           const div = document.createElement('div');
-          div.className = 'room';
-          div.textContent = `Room ID: ${room.roomID} | Players: ${room.players.length} `;
+          div.className = 'bg-white shadow p-4 rounded flex justify-between items-center';
+
+          div.innerHTML = `
+            <span>Room ID: <strong>${room.roomID}</strong> | Players: ${room.players.length}</span>
+          `;
 
           const joinBtn = document.createElement('button');
+          joinBtn.className = "bg-green-600 text-white px-4 py-1 rounded hover:bg-green-700 transition";
           joinBtn.textContent = 'Join';
           joinBtn.onclick = () => {
             window.location.href = `game.html?roomId=${room.roomID}`;
@@ -69,7 +63,8 @@
           roomsDiv.appendChild(div);
         });
       } catch (err) {
-        document.getElementById('rooms').textContent = '❌ Failed to load rooms.';
+        document.getElementById('rooms').innerHTML =
+          '<p class="text-red-500 text-center">❌ Failed to load rooms.</p>';
         console.error(err);
       }
     }
