@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tic Tac Toe Game</title>
+  <script src="https://cdn.socket.io/socket.io-1.7.0.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2em;
+    }
+    #board td {
+      width: 60px; height: 60px;
+      border: 1px solid black;
+      text-align: center;
+      vertical-align: middle;
+      font-size: 40px;
+      cursor: pointer;
+    }
+    #board td.disabled {
+      cursor: default;
+      background-color: #eee;
+    }
+    #status {
+      margin-top: 1em;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>❌ Tic Tac Toe ⭕</h1>
+
+  <table id="board" style="border-collapse: collapse;">
+    <tbody>
+      <tr><td data-row="0" data-col="0"></td><td data-row="0" data-col="1"></td><td data-row="0" data-col="2"></td></tr>
+      <tr><td data-row="1" data-col="0"></td><td data-row="1" data-col="1"></td><td data-row="1" data-col="2"></td></tr>
+      <tr><td data-row="2" data-col="0"></td><td data-row="2" data-col="1"></td><td data-row="2" data-col="2"></td></tr>
+    </tbody>
+  </table>
+
+  <div id="status">Waiting for game to start...</div>
+  <button onclick="window.location.href='lobby.html'">← Back to Lobby</button>
+
+  <script>
+    const NGROK_URL = 'https://wren-super-cobra.ngrok-free.app'; // เปลี่ยน URL ให้ตรงกับ backend ของคุณ
+    const socket = io(NGROK_URL);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('roomId');
+    let myClientID = null;
+    let currentRoomID = roomId;
+    let playerSymbol = '?';
+    let boardCells = [["", "", ""], ["", "", ""], ["", "", ""]];
+    let turn = "";
+
+    const board = document.getElementById('board');
+    const statusDiv = document.getElementById('status');
+
+    function setStatus(text) {
+      statusDiv.textContent = text;
+    }
+
+    function getSymbol(data) {
+      const player = data.players.find(p => p.clientID === myClientID);
+      return player ? player.symbol : '?';
+    }
+
+    board.addEventListener('click', e => {
+      if (!currentRoomID) return;
+      if (e.target.tagName !== 'TD') return;
+
+      const row = parseInt(e.target.dataset.row);
+      const col = parseInt(e.target.dataset.col);
+
+      if (turn !== myClientID) {
+        alert("Not your turn!");
+        return;
+      }
+
+      if (boardCells[row][col] !== "") {
+        alert("Cell already taken!");
+        return;
+      }
+
+      socket.emit('makeMove', {
+        RoomID: currentRoomID,
+        Player: myClientID,
+        Row: row,
+        Col: col
+      });
+    });
+
+    socket.on('connect', () => {
+      myClientID = socket.id;
+      console.log("[LOG] Connected with ID:", myClientID);
+      socket.emit('joinRoom', roomId);
+      setStatus(`🔌 Connected. Joining room ${roomId}...`);
+    });
+
+    socket.on('start-game', (payload) => {
+      console.log("[LOG] start-game", payload);
+      const me = payload.players.find(p => p.clientID === myClientID);
+      playerSymbol = me ? me.symbol : '?';
+      turn = payload.turn;
+      setStatus(`Game started! You are ${playerSymbol}. ${turn === myClientID ? "Your turn." : "Opponent's turn."}`);
+    });
+
+    socket.on('updateBoard', game => {
+      console.log('[LOG] updateBoard:', game);
+      boardCells = game.board;
+      turn = game.turn;
+      playerSymbol = getSymbol(game);
+
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          const cell = board.querySelector(`td[data-row="${i}"][data-col="${j}"]`);
+          cell.textContent = boardCells[i][j];
+          if (game.isOver) {
+            cell.classList.add('disabled');
+          } else {
+            cell.classList.remove('disabled');
+          }
+        }
+      }
+
+      if (game.isOver) {
+        if (game.isDraw) {
+          setStatus("⚖️ It's a draw!");
+        } else if (game.winner) {
+          setStatus(game.winner === playerSymbol ? "🎉 You won!" : "😢 You lost!");
+        }
+      } else {
+        setStatus(`Turn: ${turn === myClientID ? "Your" : "Opponent's"}`);
+      }
+    });
+
+    socket.on('opponent-left', () => {
+      setStatus("⚠️ Opponent left the game.");
+    });
+
+    socket.on('error', msg => {
+      alert(`Error: ${msg}`);
+      setStatus(`❌ ${msg}`);
+    });
+  </script>
+
+</body>
+</html>
