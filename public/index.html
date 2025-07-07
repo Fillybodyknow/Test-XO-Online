@@ -220,7 +220,6 @@
   </table>
 
   <script>
-    // Note: The NGROK_API_URL should be updated if your ngrok tunnel changes.
     const NGROK_API_URL = 'https://wren-super-cobra.ngrok-free.app';
     const socket = io(NGROK_API_URL);
 
@@ -228,7 +227,7 @@
     let myClientID = null;
     let playerSymbol = '?'; // Initialize playerSymbol
     let boardCells = [["", "", ""], ["", "", ""], ["", "", ""]];
-    let turn = "";
+    let turn = ""; // This variable holds the clientID of the player whose turn it is
 
     const createRoomBtn = document.getElementById('createRoomBtn');
     const leaveRoomBtn = document.getElementById('leaveRoomBtn');
@@ -257,18 +256,20 @@
       console.error("[LOG] Received error event:", msg);
       alert(`Error: ${msg}`);
       setStatus(`⚠️ Error: ${msg}`);
-      // Consider more specific error handling, e.g., if room full
       if (msg.includes("Room is full")) {
-        leaveRoomBtn.disabled = true; // Cannot join if full, so disable leave
+        leaveRoomBtn.disabled = true;
         currentRoomID = null;
       }
-      loadRooms(); // Reload rooms to reflect current state after an error
+      loadRooms();
     });
 
     socket.on('updateBoard', game => {
       console.log('[LOG] Received updateBoard:', game);
+      // Log the current client ID and the turn received from the server
+      console.log(`[LOG] myClientID: ${myClientID}, Turn from server: ${game.turn}`);
+
       boardCells = game.board;
-      turn = game.turn;
+      turn = game.turn; // **Crucial: Update the 'turn' variable here**
       playerSymbol = getSymbol(game.players); // Pass players array to getSymbol
 
       for (let i = 0; i < 3; i++) {
@@ -293,8 +294,9 @@
             setStatus(`😞 You lost! (${game.winner} won)`);
           }
         }
-        leaveRoomBtn.disabled = false; // Allow leaving after game ends
+        leaveRoomBtn.disabled = false;
       } else {
+        // Display whose turn it is using the symbol
         setStatus(`Turn: ${turn === myClientID ? "Your" : "Opponent's"} (${getSymbolForTurn(game.players, turn)})`);
       }
     });
@@ -302,6 +304,8 @@
     socket.on('start-game', (payload) => {
       console.log('Received start-game event:', payload);
       console.log('[LOG] My client ID:', myClientID);
+      // Log the initial turn for the game
+      console.log(`[LOG] Initial turn from start-game: ${payload.turn}`);
 
       const me = payload.players.find(p => p.clientID === myClientID);
       const mySymbol = me ? me.symbol : 'undefined';
@@ -309,7 +313,7 @@
       console.log(`🎮 Game started in room ${payload.roomId}. Your symbol: ${mySymbol}`);
 
       playerSymbol = mySymbol;
-      turn = payload.turn;
+      turn = payload.turn; // **Crucial: Update the 'turn' variable here**
       setStatus(`Game started! Your symbol: ${playerSymbol}. Turn: ${turn === myClientID ? "Your" : "Opponent's"} (${getSymbolForTurn(payload.players, turn)})`);
       resetBoard(); // Clear board for a new game
     });
@@ -328,7 +332,7 @@
         const data = await res.json();
         console.log("[LOG] Room created:", data.room.roomID);
         const roomID = data.room.roomID;
-        await loadRooms(); // Refresh room list after creation
+        await loadRooms();
         joinRoom(roomID);
       } catch (error) {
         console.error("[ERROR] Failed to create room:", error);
@@ -343,8 +347,8 @@
         setStatus(`❌ Left room ${currentRoomID}`);
         currentRoomID = null;
         leaveRoomBtn.disabled = true;
-        resetBoard(); // Reset board when leaving a room
-        loadRooms(); // Refresh rooms list
+        resetBoard();
+        loadRooms();
       }
     };
 
@@ -358,6 +362,8 @@
       const row = parseInt(e.target.dataset.row);
       const col = parseInt(e.target.dataset.col);
 
+      // **Critical Check:** Ensure 'turn' is correctly updated and compared with 'myClientID'
+      console.log(`[LOG] Click event - myClientID: ${myClientID}, Current Turn: ${turn}`);
       if (turn !== myClientID) {
         alert("It's not your turn!");
         return;
@@ -387,7 +393,7 @@
         }
         const data = await res.json();
         console.log("[LOG] Rooms loaded:", data.rooms);
-        roomsDiv.innerHTML = ''; // Clear existing rooms
+        roomsDiv.innerHTML = '';
 
         if (data.rooms.length === 0) {
           roomsDiv.textContent = 'No rooms available. Create a new one!';
@@ -399,7 +405,6 @@
           const playerCount = room.players ? room.players.length : 0;
           div.textContent = `Room ID: ${room.roomID} | Players: ${playerCount}/2`;
 
-          // Only show join button if the room is not full and not the current room
           if (playerCount < 2 && room.roomID !== currentRoomID) {
             const joinBtn = document.createElement('button');
             joinBtn.textContent = 'Join';
@@ -431,13 +436,12 @@
       if (!myClientID) {
         console.warn("[WARN] myClientID not set yet. Waiting for 'connect' event...");
         socket.once('connect', () => {
-          joinRoom(roomID); // Retry joining once connected
+          joinRoom(roomID);
         });
         return;
       }
 
       if (currentRoomID && currentRoomID !== roomID) {
-        // Optionally, ask user if they want to leave current room first
         if (!confirm(`You are already in room ${currentRoomID}. Do you want to leave it and join ${roomID}?`)) {
           return;
         }
@@ -449,20 +453,18 @@
       currentRoomID = roomID;
       setStatus(`✅ Attempting to join room ${roomID}...`);
       leaveRoomBtn.disabled = false;
-      loadRooms(); // Refresh rooms list to update joined status
+      loadRooms();
     }
 
     function setStatus(text) {
       statusDiv.textContent = text;
     }
 
-    // Helper to get player's symbol based on clientID from players array
     function getSymbol(playersArray) {
       const player = playersArray.find(p => p.clientID === myClientID);
       return player ? player.symbol : '?';
     }
 
-    // Helper to get symbol of the player whose turn it is
     function getSymbolForTurn(playersArray, clientID) {
         const player = playersArray.find(p => p.clientID === clientID);
         return player ? player.symbol : '?';
@@ -477,7 +479,7 @@
           cell.classList.remove('disabled');
         }
       }
-      turn = ""; // Reset turn
+      turn = ""; // Ensure turn is reset for a new game or when leaving
     }
   </script>
 </body>
