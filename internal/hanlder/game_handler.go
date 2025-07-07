@@ -23,7 +23,7 @@ func (g *GameHandler) GetAllRooms(c *gin.Context) {
 	c.JSON(200, gin.H{"rooms": AllRooms})
 }
 
-func (g *GameHandler) CreateGameRoom(s *socketio.Server) model.Game {
+func (g *GameHandler) CreateGameRoom(c *gin.Context) {
 	gameRoom := model.Game{
 		RoomID:    "",
 		Players:   []model.Player{},
@@ -37,7 +37,7 @@ func (g *GameHandler) CreateGameRoom(s *socketio.Server) model.Game {
 
 	createdRoom := g.GamerService.CreateGameRoom(gameRoom)
 
-	return createdRoom
+	c.JSON(200, gin.H{"room": createdRoom})
 }
 
 func (g *GameHandler) JoinGameRoom(ClientID string, roomID string, s *socketio.Server) error {
