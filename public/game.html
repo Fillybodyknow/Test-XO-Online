@@ -40,7 +40,8 @@
   </table>
 
   <div id="status">Waiting for game to start...</div>
-  <button onclick="window.location.href='index.html'">← Back to Lobby</button>
+  <button onclick="leaveGame()">← Back to Lobby</button>
+
 
 
   <script>
@@ -61,6 +62,14 @@
     function setStatus(text) {
       statusDiv.textContent = text;
     }
+
+    function leaveGame() {
+  if (roomId) {
+    socket.emit('leaveRoom', roomId);  // แจ้ง backend ว่าออกห้อง
+  }
+  window.location.href = 'index.html';  // กลับไป lobby
+}
+
 
     function getSymbol(data) {
       const player = data.players.find(p => p.clientID === myClientID);
