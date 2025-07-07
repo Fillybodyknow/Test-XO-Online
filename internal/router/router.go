@@ -16,5 +16,4 @@ func NewGameRouter(gameHandler *hanlder.GameHandler) *GameRouter {
 
 func (r *GameRouter) InitRouter(rg *gin.RouterGroup) {
 	rg.GET("/rooms", r.GameHandler.GetAllRooms)
-	rg.POST("/rooms", r.GameHandler.CreateGameRoom)
 }
